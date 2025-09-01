@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# conductor - CLI tool for orchestrating workflows
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Export PROJECT_ROOT so other modules can use it
+export PROJECT_ROOT
+
+# Source required modules
+if [[ -f "$PROJECT_ROOT/src/logging.sh" ]]; then
+    source "$PROJECT_ROOT/src/logging.sh"
+fi
+
+if [[ -f "$PROJECT_ROOT/src/cli.sh" ]]; then
+    source "$PROJECT_ROOT/src/cli.sh"
+elif [[ -f "$SCRIPT_DIR/../src/cli.sh" ]]; then
+    source "$SCRIPT_DIR/../src/cli.sh"
+else
+    echo "Error: Could not find cli.sh module"
+    exit 1
+fi
+
+# Main entry point
+main() {
+    # Log startup
+    log_info "conductor started"
+    
+    # Parse command line arguments
+    parse_args "$@"
+    
+    # Log shutdown
+    log_info "conductor finished"
+}
+
+# Execute main function with all arguments
+main "$@"

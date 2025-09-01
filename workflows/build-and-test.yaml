@@ -1,0 +1,6 @@
+name: build-and-test
+steps:
+  - name: build
+    command: echo "Building project..."
+  - name: test
+    command: echo "Running tests..."
