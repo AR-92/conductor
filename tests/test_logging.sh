@@ -1,38 +1,10 @@
 #!/usr/bin/env bash
-# Test suite for the conductor logging module
+# tests/test_logging.sh - Logging module tests
 
 set -euo pipefail
 
-# Import test utilities or define helper functions
-assert_equals() {
-    local expected="$1"
-    local actual="$2"
-    local test_name="$3"
-    
-    if [[ "$expected" == "$actual" ]]; then
-        echo "PASS: $test_name"
-    else
-        echo "FAIL: $test_name"
-        echo "  Expected: $expected"
-        echo "  Actual: $actual"
-        return 1
-    fi
-}
-
-assert_contains() {
-    local needle="$1"
-    local haystack="$2"
-    local test_name="$3"
-    
-    if echo "$haystack" | grep -q "$needle"; then
-        echo "PASS: $test_name"
-    else
-        echo "FAIL: $test_name"
-        echo "  Expected to find: $needle"
-        echo "  In output: $haystack"
-        return 1
-    fi
-}
+# Source core test utilities
+source "$(dirname "${BASH_SOURCE[0]}")/test_core.sh"
 
 # Setup
 setup() {
@@ -81,7 +53,13 @@ get_log_file() {
 should_log() {
     local msg_level="$1"
     
-    if [[ ${LOG_LEVELS[$msg_level]} -le ${LOG_LEVELS[$LOG_LEVEL]:-3} ]]; then
+    # If the message level is not defined, default to INFO
+    local msg_level_num=${LOG_LEVELS[$msg_level]:-3}
+    
+    # If the current log level is not defined, default to INFO
+    local current_level_num=${LOG_LEVELS[$LOG_LEVEL]:-3}
+    
+    if [[ $msg_level_num -le $current_level_num ]]; then
         return 0
     else
         return 1
@@ -141,14 +119,70 @@ test_log_levels_defined() {
     # Check that log levels are defined
     if [[ -n "${LOG_LEVELS[ERROR]:-}" ]] && [[ -n "${LOG_LEVELS[WARN]:-}" ]] && 
        [[ -n "${LOG_LEVELS[INFO]:-}" ]] && [[ -n "${LOG_LEVELS[DEBUG]:-}" ]]; then
-        echo "PASS: Log levels are defined"
+        assert_equals "defined" "defined" "Log levels should be defined"
     else
-        echo "FAIL: Log levels are not properly defined"
+        assert_equals "defined" "undefined" "Log levels should be defined"
         return 1
     fi
 }
 
-test_should_log() {
+test_should_log_error_levels() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Test with ERROR level
+    LOG_LEVEL="ERROR"
+    
+    # Test that ERROR should be logged at ERROR level
+    if should_log "ERROR"; then
+        assert_equals "true" "true" "ERROR should be logged at ERROR level"
+    else
+        assert_equals "true" "false" "ERROR should be logged at ERROR level"
+        return 1
+    fi
+    
+    # Test that WARN should not be logged at ERROR level
+    if ! should_log "WARN"; then
+        assert_equals "false" "false" "WARN should not be logged at ERROR level"
+    else
+        assert_equals "false" "true" "WARN should not be logged at ERROR level"
+        return 1
+    fi
+}
+
+test_should_log_warn_levels() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Test with WARN level
+    LOG_LEVEL="WARN"
+    
+    # Test that ERROR should be logged at WARN level
+    if should_log "ERROR"; then
+        assert_equals "true" "true" "ERROR should be logged at WARN level"
+    else
+        assert_equals "true" "false" "ERROR should be logged at WARN level"
+        return 1
+    fi
+    
+    # Test that WARN should be logged at WARN level
+    if should_log "WARN"; then
+        assert_equals "true" "true" "WARN should be logged at WARN level"
+    else
+        assert_equals "true" "false" "WARN should be logged at WARN level"
+        return 1
+    fi
+    
+    # Test that INFO should not be logged at WARN level
+    if ! should_log "INFO"; then
+        assert_equals "false" "false" "INFO should not be logged at WARN level"
+    else
+        assert_equals "false" "true" "INFO should not be logged at WARN level"
+        return 1
+    fi
+}
+
+test_should_log_info_levels() {
     # Source the logging module
     source src/logging.sh
     
@@ -157,40 +191,68 @@ test_should_log() {
     
     # Test that INFO and higher priority messages should be logged
     if should_log "ERROR"; then
-        echo "PASS: ERROR should be logged at INFO level"
+        assert_equals "true" "true" "ERROR should be logged at INFO level"
     else
-        echo "FAIL: ERROR should be logged at INFO level"
+        assert_equals "true" "false" "ERROR should be logged at INFO level"
         return 1
     fi
     
     if should_log "WARN"; then
-        echo "PASS: WARN should be logged at INFO level"
+        assert_equals "true" "true" "WARN should be logged at INFO level"
     else
-        echo "FAIL: WARN should be logged at INFO level"
+        assert_equals "true" "false" "WARN should be logged at INFO level"
         return 1
     fi
     
     if should_log "INFO"; then
-        echo "PASS: INFO should be logged at INFO level"
+        assert_equals "true" "true" "INFO should be logged at INFO level"
     else
-        echo "FAIL: INFO should be logged at INFO level"
+        assert_equals "true" "false" "INFO should be logged at INFO level"
         return 1
     fi
     
     # Test that DEBUG should not be logged at INFO level
     if ! should_log "DEBUG"; then
-        echo "PASS: DEBUG should not be logged at INFO level"
+        assert_equals "false" "false" "DEBUG should not be logged at INFO level"
     else
-        echo "FAIL: DEBUG should not be logged at INFO level"
+        assert_equals "false" "true" "DEBUG should not be logged at INFO level"
         return 1
     fi
+}
+
+test_should_log_debug_levels() {
+    # Source the logging module
+    source src/logging.sh
     
     # Test with DEBUG level
     LOG_LEVEL="DEBUG"
-    if should_log "DEBUG"; then
-        echo "PASS: DEBUG should be logged at DEBUG level"
+    
+    # Test that all levels should be logged at DEBUG level
+    if should_log "ERROR"; then
+        assert_equals "true" "true" "ERROR should be logged at DEBUG level"
     else
-        echo "FAIL: DEBUG should be logged at DEBUG level"
+        assert_equals "true" "false" "ERROR should be logged at DEBUG level"
+        return 1
+    fi
+    
+    if should_log "WARN"; then
+        assert_equals "true" "true" "WARN should be logged at DEBUG level"
+    else
+        assert_equals "true" "false" "WARN should be logged at DEBUG level"
+        return 1
+    fi
+    
+    if should_log "INFO"; then
+        assert_equals "true" "true" "INFO should be logged at DEBUG level"
+    else
+        assert_equals "true" "false" "INFO should be logged at DEBUG level"
+        return 1
+    fi
+    
+    if should_log "DEBUG"; then
+        assert_equals "true" "true" "DEBUG should be logged at DEBUG level"
+    else
+        assert_equals "true" "false" "DEBUG should be logged at DEBUG level"
         return 1
     fi
 }
@@ -209,12 +271,12 @@ test_log_functions() {
     local debug_msg="This is a debug message"
     
     # These should not produce errors
-    log_error "$error_msg" 2>/dev/null || echo "FAIL: log_error produced an error"
-    log_warn "$warn_msg" 2>/dev/null || echo "FAIL: log_warn produced an error"
-    log_info "$info_msg" 2>/dev/null || echo "FAIL: log_info produced an error"
-    log_debug "$debug_msg" 2>/dev/null || echo "FAIL: log_debug produced an error"
+    log_error "$error_msg" 2>/dev/null || assert_equals "0" "1" "log_error should not produce an error"
+    log_warn "$warn_msg" 2>/dev/null || assert_equals "0" "1" "log_warn should not produce an error"
+    log_info "$info_msg" 2>/dev/null || assert_equals "0" "1" "log_info should not produce an error"
+    log_debug "$debug_msg" 2>/dev/null || assert_equals "0" "1" "log_debug should not produce an error"
     
-    echo "PASS: Log functions can be called without errors"
+    assert_equals "0" "0" "Log functions can be called without errors"
 }
 
 test_timestamp_format() {
@@ -226,9 +288,185 @@ test_timestamp_format() {
     
     # Check that timestamp matches expected format
     if echo "$timestamp" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$'; then
-        echo "PASS: Timestamp format is correct"
+        assert_equals "valid" "valid" "Timestamp format should be correct"
     else
-        echo "FAIL: Timestamp format is incorrect: $timestamp"
+        assert_equals "valid" "invalid" "Timestamp format should be correct: $timestamp"
+        return 1
+    fi
+}
+
+test_log_dir_creation() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Check that log directory exists
+    if [[ -d "$LOG_DIR" ]]; then
+        assert_equals "exists" "exists" "Log directory should be created"
+    else
+        assert_equals "exists" "missing" "Log directory should be created"
+        return 1
+    fi
+}
+
+test_invalid_log_level() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Test with invalid log level (should default to INFO)
+    LOG_LEVEL="INVALID"
+    
+    # Test that INFO should be logged with invalid level
+    if should_log "INFO"; then
+        assert_equals "true" "true" "INFO should be logged with invalid log level"
+    else
+        assert_equals "true" "false" "INFO should be logged with invalid log level"
+        return 1
+    fi
+    
+    # Test that DEBUG should not be logged with invalid level (defaults to INFO)
+    if ! should_log "DEBUG"; then
+        assert_equals "false" "false" "DEBUG should not be logged with invalid log level"
+    else
+        assert_equals "false" "true" "DEBUG should not be logged with invalid log level"
+        return 1
+    fi
+}
+
+test_invalid_message_level() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Test with INFO log level
+    LOG_LEVEL="INFO"
+    
+    # Test that invalid message level should default to INFO
+    if should_log "INVALID"; then
+        assert_equals "true" "true" "Invalid message level should default to INFO"
+    else
+        assert_equals "true" "false" "Invalid message level should default to INFO"
+        return 1
+    fi
+}
+
+test_get_log_file() {
+    # Source the logging module
+    source src/logging.sh
+    
+    local log_file
+    log_file=$(get_log_file)
+    
+    # Check that log file path contains date
+    if echo "$log_file" | grep -qE 'conductor-[0-9]{4}-[0-9]{2}-[0-9]{2}\.log$'; then
+        assert_equals "valid" "valid" "Log file name should contain date"
+    else
+        assert_equals "valid" "invalid" "Log file name should contain date: $log_file"
+        return 1
+    fi
+}
+
+test_write_log() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Set log level to DEBUG
+    LOG_LEVEL="DEBUG"
+    
+    # Write a test log entry
+    write_log "INFO" "Test log entry"
+    
+    # Check that log file was created and contains entry
+    local log_file
+    log_file=$(get_log_file)
+    
+    if [[ -f "$log_file" ]]; then
+        if grep -q "Test log entry" "$log_file"; then
+            assert_equals "found" "found" "Log entry should be written to file"
+        else
+            assert_equals "found" "missing" "Log entry should be written to file"
+            return 1
+        fi
+    else
+        assert_equals "exists" "missing" "Log file should be created"
+        return 1
+    fi
+}
+
+test_error_log_to_stderr() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Set log level to DEBUG
+    LOG_LEVEL="DEBUG"
+    
+    # Capture stderr output
+    local stderr_output
+    stderr_output=$(log_error "Test error message" 2>&1 >/dev/null)
+    
+    # Check that error message was written to stderr
+    if echo "$stderr_output" | grep -q "Test error message"; then
+        assert_equals "found" "found" "Error message should be written to stderr"
+    else
+        assert_equals "found" "missing" "Error message should be written to stderr"
+        return 1
+    fi
+}
+
+test_warn_log_to_stderr() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Set log level to DEBUG
+    LOG_LEVEL="DEBUG"
+    
+    # Capture stderr output
+    local stderr_output
+    stderr_output=$(log_warn "Test warning message" 2>&1 >/dev/null)
+    
+    # Check that warning message was written to stderr
+    if echo "$stderr_output" | grep -q "Test warning message"; then
+        assert_equals "found" "found" "Warning message should be written to stderr"
+    else
+        assert_equals "found" "missing" "Warning message should be written to stderr"
+        return 1
+    fi
+}
+
+test_info_log_not_to_stderr() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Set log level to DEBUG
+    LOG_LEVEL="DEBUG"
+    
+    # Capture stderr output
+    local stderr_output
+    stderr_output=$(log_info "Test info message" 2>&1 >/dev/null)
+    
+    # Check that info message was not written to stderr
+    if ! echo "$stderr_output" | grep -q "Test info message"; then
+        assert_equals "not_found" "not_found" "Info message should not be written to stderr"
+    else
+        assert_equals "not_found" "found" "Info message should not be written to stderr"
+        return 1
+    fi
+}
+
+test_debug_log_not_to_stderr() {
+    # Source the logging module
+    source src/logging.sh
+    
+    # Set log level to DEBUG
+    LOG_LEVEL="DEBUG"
+    
+    # Capture stderr output
+    local stderr_output
+    stderr_output=$(log_debug "Test debug message" 2>&1 >/dev/null)
+    
+    # Check that debug message was not written to stderr
+    if ! echo "$stderr_output" | grep -q "Test debug message"; then
+        assert_equals "not_found" "not_found" "Debug message should not be written to stderr"
+    else
+        assert_equals "not_found" "found" "Debug message should not be written to stderr"
         return 1
     fi
 }
@@ -240,13 +478,37 @@ main() {
     setup
     
     test_log_levels_defined
-    test_should_log
+    test_should_log_error_levels
+    test_should_log_warn_levels
+    test_should_log_info_levels
+    test_should_log_debug_levels
     test_log_functions
     test_timestamp_format
+    test_log_dir_creation
+    test_invalid_log_level
+    test_invalid_message_level
+    test_get_log_file
+    test_write_log
+    test_error_log_to_stderr
+    test_warn_log_to_stderr
+    test_info_log_not_to_stderr
+    test_debug_log_not_to_stderr
     
     teardown
     
-    echo "All logging tests passed!"
+    echo ""
+    echo "=== Logging Tests Summary ==="
+    echo "Total tests: $TEST_COUNT"
+    echo "Passed: $PASS_COUNT"
+    echo "Failed: $FAIL_COUNT"
+    
+    if [[ $FAIL_COUNT -eq 0 ]]; then
+        echo "All logging tests passed!"
+        return 0
+    else
+        echo "Some logging tests failed!"
+        return 1
+    fi
 }
 
 # Run tests if script is executed directly

@@ -1,38 +1,10 @@
 #!/usr/bin/env bash
-# Test suite for the conductor CLI tool
+# tests/test_cli.sh - CLI functionality tests
 
 set -euo pipefail
 
-# Import test utilities or define helper functions
-assert_equals() {
-    local expected="$1"
-    local actual="$2"
-    local test_name="$3"
-    
-    if [[ "$expected" == "$actual" ]]; then
-        echo "PASS: $test_name"
-    else
-        echo "FAIL: $test_name"
-        echo "  Expected: $expected"
-        echo "  Actual: $actual"
-        return 1
-    fi
-}
-
-assert_contains() {
-    local needle="$1"
-    local haystack="$2"
-    local test_name="$3"
-    
-    if echo "$haystack" | grep -q "$needle"; then
-        echo "PASS: $test_name"
-    else
-        echo "FAIL: $test_name"
-        echo "  Expected to find: $needle"
-        echo "  In output: $haystack"
-        return 1
-    fi
-}
+# Source core test utilities
+source "$(dirname "${BASH_SOURCE[0]}")/test_core.sh"
 
 # Setup
 setup() {
@@ -61,6 +33,7 @@ main() {
             echo "Commands:"
             echo "  list    List available workflows"
             echo "  run     Run a workflow"
+            echo "  inspect Inspect a workflow"
             ;;
         --version|-v)
             echo "conductor v0.1.0"
@@ -68,23 +41,32 @@ main() {
         list)
             echo "Available workflows:"
             echo "  example-workflow"
+            echo "  build-and-test"
             ;;
         run)
             if [[ -n "${2:-}" ]]; then
                 echo "Running workflow: $2"
             else
-                echo "Error: No workflow specified"
+                echo "Error: No workflow specified" >&2
+                exit 1
+            fi
+            ;;
+        inspect)
+            if [[ -n "${2:-}" ]]; then
+                echo "Inspecting workflow: $2"
+            else
+                echo "Error: No workflow specified" >&2
                 exit 1
             fi
             ;;
         "")
-            echo "Error: No command specified"
-            echo "Run 'conductor --help' for usage information"
+            echo "Error: No command specified" >&2
+            echo "Run 'conductor --help' for usage information" >&2
             exit 1
             ;;
         *)
-            echo "Error: Unknown command '$1'"
-            echo "Run 'conductor --help' for usage information"
+            echo "Error: Unknown command '$1'" >&2
+            echo "Run 'conductor --help' for usage information" >&2
             exit 1
             ;;
     esac
@@ -124,6 +106,7 @@ test_list_workflows() {
     
     assert_contains "Available workflows:" "$output" "List command should show header"
     assert_contains "example-workflow" "$output" "List command should show example workflow"
+    assert_contains "build-and-test" "$output" "List command should show build-and-test workflow"
 }
 
 test_run_workflow() {
@@ -131,6 +114,13 @@ test_run_workflow() {
     output=$(./bin/conductor run example-workflow)
     
     assert_equals "Running workflow: example-workflow" "$output" "Run command should execute workflow"
+}
+
+test_inspect_workflow() {
+    local output
+    output=$(./bin/conductor inspect example-workflow)
+    
+    assert_equals "Inspecting workflow: example-workflow" "$output" "Inspect command should inspect workflow"
 }
 
 test_run_without_workflow() {
@@ -141,6 +131,16 @@ test_run_without_workflow() {
     
     assert_equals 1 "$exit_code" "Run without workflow should exit with error code 1"
     assert_contains "Error: No workflow specified" "$output" "Run without workflow should show error message"
+}
+
+test_inspect_without_workflow() {
+    local output
+    local exit_code=0
+    
+    output=$(./bin/conductor inspect 2>&1) || exit_code=$?
+    
+    assert_equals 1 "$exit_code" "Inspect without workflow should exit with error code 1"
+    assert_contains "Error: No workflow specified" "$output" "Inspect without workflow should show error message"
 }
 
 test_no_command() {
@@ -163,6 +163,40 @@ test_unknown_command() {
     assert_contains "Error: Unknown command 'unknown'" "$output" "Unknown command should show error message"
 }
 
+test_help_short_flag() {
+    local output
+    output=$(./bin/conductor -h)
+    
+    assert_contains "Usage: conductor" "$output" "Help with -h flag should show usage"
+}
+
+test_version_short_flag() {
+    local output
+    output=$(./bin/conductor -v)
+    
+    assert_equals "conductor v0.1.0" "$output" "Version with -v flag should show version"
+}
+
+test_run_with_empty_workflow_name() {
+    local output
+    local exit_code=0
+    
+    output=$(./bin/conductor run "" 2>&1) || exit_code=$?
+    
+    assert_equals 1 "$exit_code" "Run with empty workflow name should exit with error code 1"
+    assert_contains "Error: No workflow specified" "$output" "Run with empty workflow name should show error message"
+}
+
+test_inspect_with_empty_workflow_name() {
+    local output
+    local exit_code=0
+    
+    output=$(./bin/conductor inspect "" 2>&1) || exit_code=$?
+    
+    assert_equals 1 "$exit_code" "Inspect with empty workflow name should exit with error code 1"
+    assert_contains "Error: No workflow specified" "$output" "Inspect with empty workflow name should show error message"
+}
+
 # Main test runner
 main() {
     echo "Running CLI tests..."
@@ -173,13 +207,31 @@ main() {
     test_version_output
     test_list_workflows
     test_run_workflow
+    test_inspect_workflow
     test_run_without_workflow
+    test_inspect_without_workflow
     test_no_command
     test_unknown_command
+    test_help_short_flag
+    test_version_short_flag
+    test_run_with_empty_workflow_name
+    test_inspect_with_empty_workflow_name
     
     teardown
     
-    echo "All CLI tests passed!"
+    echo ""
+    echo "=== CLI Tests Summary ==="
+    echo "Total tests: $TEST_COUNT"
+    echo "Passed: $PASS_COUNT"
+    echo "Failed: $FAIL_COUNT"
+    
+    if [[ $FAIL_COUNT -eq 0 ]]; then
+        echo "All CLI tests passed!"
+        return 0
+    else
+        echo "Some CLI tests failed!"
+        return 1
+    fi
 }
 
 # Run tests if script is executed directly

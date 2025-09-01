@@ -36,6 +36,9 @@ is_empty() {
 join_by() {
     local delimiter="$1"
     shift
+    if [[ $# -eq 0 ]]; then
+        return 0
+    fi
     local first="$1"
     shift
     printf "%s" "$first" "${@/#/$delimiter}"
