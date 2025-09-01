@@ -1,0 +1,23 @@
+# workflows/conditional-example.yaml
+name: conditional-example
+description: Example of conditional step execution
+steps:
+  - name: set-environment
+    command: |
+      if [ -z "${ENVIRONMENT:-}" ]; then
+        echo "development" > /tmp/conductor-env.txt
+      else
+        echo "$ENVIRONMENT" > /tmp/conductor-env.txt
+      fi
+  - name: check-environment
+    command: |
+      ENV=$(cat /tmp/conductor-env.txt)
+      echo "Current environment: $ENV"
+  - name: production-only-task
+    condition: '[ "$(cat /tmp/conductor-env.txt)" = "production" ]'
+    command: echo "Running production-specific task..."
+  - name: development-only-task
+    condition: '[ "$(cat /tmp/conductor-env.txt)" = "development" ]'
+    command: echo "Running development-specific task..."
+  - name: cleanup
+    command: rm -f /tmp/conductor-env.txt

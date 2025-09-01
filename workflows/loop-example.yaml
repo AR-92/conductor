@@ -1,0 +1,15 @@
+# workflows/loop-example.yaml
+name: loop-example
+description: Example of loop processing
+loop:
+  items:
+    - { name: "web-server", port: 80 }
+    - { name: "api-server", port: 8080 }
+    - { name: "db-server", port: 5432 }
+steps:
+  - name: process-server
+    command: |
+      echo "Processing {{item.name}} on port {{item.port}}"
+      echo "Checking health of {{item.name}}..."
+      # In a real implementation, you would do actual health checks here
+      echo "{{item.name}} is healthy"

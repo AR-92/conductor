@@ -1,0 +1,26 @@
+# workflows/parallel-example.yaml
+name: parallel-example
+description: Example of parallel task execution
+steps:
+  - name: prepare-tasks
+    command: echo "Preparing parallel tasks..."
+  - name: parallel-group-1
+    type: parallel
+    steps:
+      - name: task-1
+        command: |
+          echo "Task 1 started"
+          sleep 2
+          echo "Task 1 completed"
+      - name: task-2
+        command: |
+          echo "Task 2 started"
+          sleep 3
+          echo "Task 2 completed"
+      - name: task-3
+        command: |
+          echo "Task 3 started"
+          sleep 1
+          echo "Task 3 completed"
+  - name: finalize
+    command: echo "All parallel tasks completed, finalizing..."

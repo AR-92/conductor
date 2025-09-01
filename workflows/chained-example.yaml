@@ -1,0 +1,13 @@
+# workflows/chained-example.yaml
+name: chained-example
+description: Example of workflow chaining
+depends_on:
+  - build
+  - test
+steps:
+  - name: pre-deploy-checks
+    command: echo "Running pre-deployment checks..."
+  - name: deploy
+    command: echo "Deploying application..."
+  - name: post-deploy-verification
+    command: echo "Verifying deployment..."
