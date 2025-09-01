@@ -110,6 +110,81 @@ Make sure to make the script executable:
 chmod +x workflows/deploy.sh
 ```
 
+## Advanced Workflow Features
+
+conductor supports advanced workflow features for complex automation scenarios:
+
+### Parallel Execution
+Run multiple steps simultaneously to reduce execution time:
+
+```yaml
+name: parallel-workflow
+steps:
+  - name: parallel-group
+    type: parallel
+    steps:
+      - name: task-1
+        command: echo "Running task 1"
+      - name: task-2
+        command: echo "Running task 2"
+```
+
+### Conditional Execution
+Execute steps based on conditions:
+
+```yaml
+name: conditional-workflow
+steps:
+  - name: check-environment
+    command: echo "$ENV" > /tmp/env.txt
+  - name: production-task
+    condition: '[ "$(cat /tmp/env.txt)" = "production" ]'
+    command: echo "Running production task"
+```
+
+### Loop Processing
+Process multiple items with the same steps:
+
+```yaml
+name: loop-workflow
+loop:
+  items:
+    - { name: "server1", port: 80 }
+    - { name: "server2", port: 8080 }
+steps:
+  - name: process-item
+    command: echo "Processing {{item.name}} on port {{item.port}}"
+```
+
+### Workflow Chaining
+Execute workflows in sequence with dependencies:
+
+```yaml
+name: chained-workflow
+depends_on:
+  - build
+  - test
+steps:
+  - name: deploy
+    command: echo "Deploying application"
+```
+
+### AI Integration
+Connect workflows to AI services for intelligent decision-making:
+
+```bash
+#!/usr/bin/env bash
+# AI-powered workflow
+if [ -n "$OPENAI_API_KEY" ]; then
+  # Use AI to analyze logs and make decisions
+  curl -s -X POST "https://api.openai.com/v1/chat/completions" \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -d '{"prompt": "Analyze these logs..."}'
+fi
+```
+
+See `docs/advanced-features.md` for detailed implementation information.
+
 ## Logging
 
 conductor automatically logs all operations to daily rotated log files in the `logs/` directory. Log files are named with the pattern `conductor-YYYY-MM-DD.log`.

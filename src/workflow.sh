@@ -57,6 +57,15 @@ validate_workflow() {
             ;;
     esac
     
+    # For YAML/JSON files, check if jq is available for advanced features
+    case "$workflow_file" in
+        *.yaml|*.yml|*.json)
+            if ! command -v jq >/dev/null 2>&1; then
+                echo "Warning: jq not found, advanced workflow features will be limited" >&2
+            fi
+            ;;
+    esac
+    
     # For now, just return success
     return 0
 }
@@ -105,9 +114,16 @@ run_workflow() {
             bash "$workflow_file"
             ;;
         *.yaml|*.yml|*.json)
+            # For YAML/JSON workflows, we would process them here
             # For now, just print that we would process these
             echo "Processing $workflow_file"
             # TODO: Implement YAML/JSON workflow processing
+            # This would include support for:
+            # - Parallel execution
+            # - Conditional steps
+            # - Loop processing
+            # - Workflow chaining
+            # - AI integration
             ;;
         *)
             echo "Error: Unsupported workflow file type: $workflow_file" >&2
@@ -153,4 +169,20 @@ inspect_workflow() {
     # Show file contents for inspection
     echo "Contents:"
     cat "$workflow_file"
+}
+
+# Advanced workflow processing functions
+# These would be implemented in advanced-workflow.sh for more complex features
+process_advanced_workflow() {
+    local workflow_file="$1"
+    
+    # This function would handle:
+    # - Parallel execution groups
+    # - Conditional steps
+    # - Loop processing
+    # - Workflow dependencies
+    # - AI integration
+    
+    echo "Advanced workflow processing would be implemented here"
+    echo "See src/advanced-workflow.sh for implementation details"
 }
