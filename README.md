@@ -10,6 +10,7 @@ A powerful CLI tool for orchestrating and running workflows with composable step
 - [Quick Start](#quick-start)
 - [Core Concepts](#core-concepts)
 - [Defining Workflows](#defining-workflows)
+- [Advanced Features](#advanced-features)
 - [CLI Commands](#cli-commands)
 - [Logging](#logging)
 - [Project Structure](#project-structure)
@@ -26,6 +27,7 @@ A powerful CLI tool for orchestrating and running workflows with composable step
 - **Test-Driven Development**: Complete test suite covering all functionality
 - **Pure Bash Implementation**: No external dependencies, runs anywhere Bash is available
 - **Extensible Design**: Modular architecture for easy customization and extension
+- **Advanced Workflow Features**: Parallel execution, conditional steps, loops, chaining, and AI integration
 
 ## Why Use Conductor?
 
@@ -173,6 +175,76 @@ Make it executable:
 chmod +x workflows/deploy.sh
 ```
 
+## Advanced Features
+
+Conductor supports advanced workflow features for complex automation scenarios:
+
+### Parallel Execution
+Run multiple steps simultaneously to reduce execution time:
+```yaml
+name: parallel-workflow
+steps:
+  - name: parallel-group
+    type: parallel
+    steps:
+      - name: task-1
+        command: echo "Running task 1"
+      - name: task-2
+        command: echo "Running task 2"
+```
+
+### Conditional Execution
+Execute steps based on conditions:
+```yaml
+name: conditional-workflow
+steps:
+  - name: check-environment
+    command: echo "$ENV" > /tmp/env.txt
+  - name: production-task
+    condition: '[ "$(cat /tmp/env.txt)" = "production" ]'
+    command: echo "Running production task"
+```
+
+### Loop Processing
+Process multiple items with the same steps:
+```yaml
+name: loop-workflow
+loop:
+  items:
+    - { name: "server1", port: 80 }
+    - { name: "server2", port: 8080 }
+steps:
+  - name: process-item
+    command: echo "Processing {{item.name}} on port {{item.port}}"
+```
+
+### Workflow Chaining
+Execute workflows in sequence with dependencies:
+```yaml
+name: chained-workflow
+depends_on:
+  - build
+  - test
+steps:
+  - name: deploy
+    command: echo "Deploying application"
+```
+
+### AI Integration
+Connect workflows to AI services for intelligent decision-making:
+```bash
+#!/usr/bin/env bash
+# AI-powered workflow
+if [ -n "$OPENAI_API_KEY" ]; then
+  # Use AI to analyze logs and make decisions
+  curl -s -X POST "https://api.openai.com/v1/chat/completions" 
+    -H "Authorization: Bearer $OPENAI_API_KEY" 
+    -d '{"prompt": "Analyze these logs..."}'
+fi
+```
+
+See `docs/advanced-features.md` for detailed implementation information.
+
 ## CLI Commands
 
 ### Help
@@ -245,16 +317,25 @@ conductor/
 │   ├── logging.sh
 │   ├── workflow.sh
 │   ├── helpers.sh
-│   └── cli.sh
+│   ├── cli.sh
+│   └── advanced-workflow.sh
 ├── tests/         # unit and integration tests
 │   ├── test_logging.sh
 │   ├── test_cli.sh
-│   └── test_workflow.sh
+│   ├── test_workflow.sh
+│   └── test_advanced_workflow.sh
 ├── docs/          # documentation
-│   └── usage.md
+│   ├── usage.md
+│   └── advanced-features.md
 ├── workflows/     # workflow definitions
 │   ├── build-and-test.yaml
-│   └── deploy.sh
+│   ├── deploy.sh
+│   ├── advanced-demo.sh
+│   ├── parallel-example.yaml
+│   ├── conditional-example.yaml
+│   ├── loop-example.yaml
+│   ├── chained-example.yaml
+│   └── ai-example.sh
 ├── logs/          # log files (runtime generated)
 ├── Makefile       # for building, running tests, cleaning
 ├── VERSION        # version file
@@ -271,6 +352,9 @@ make test
 
 # Run all tests with detailed output
 make test-all
+
+# Run advanced workflow tests only
+make test-advanced
 ```
 
 ### Linting
